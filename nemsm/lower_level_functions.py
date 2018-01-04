@@ -138,14 +138,15 @@ def calc_stationary_distribution(W,
 
   	>>> calc_stationary_distribution(W) 
   	
-  	>>>  
+  	>>>  array([ 0.35212134,  0.18138963,  0.18856323,  0.2779258 ])
 
 
    '''
 
 	#check if matrix is valid transition matrix
-	if check_4_transition_matrix(W,transition_prob=transition_prob) == False:
-		raise ValueError('Input matrix is not a valid transition matrix')
+	if checked == False:
+		if check_4_transition_matrix(W,transition_prob=transition_prob) == False:
+			raise ValueError('Input matrix is not a valid transition matrix')
 
 
 	#compute eigenvectors and values
@@ -160,3 +161,170 @@ def calc_stationary_distribution(W,
 		p_star = np.real(EV[:,ind]/np.sum(EV[:,ind]))
 
 	return p_star
+
+
+
+def convert_prob_to_ratematrix(T,
+							 	lagtime,
+							 	method='series',
+							 	eps=1e-10,
+							 	out_log=True,
+							 	checked=False):
+	'''
+	Convert given transition probability matrix in rate matrix
+
+	Parameters
+	------------------
+
+	T (N,N) : ndarray
+			  row or column stochastic transition probability matrix
+
+	lagtime : float
+			  lagtime in absolute units 
+
+	method  : string 
+			  conversion method. Currently implemented are: "exact", "pseudo" and "series"
+
+	eps  : float 
+			.....
+
+	out_log : bool (default True)
+			  when True print number of iterations within method "series"
+
+	checked : bool (default False)
+			  whether or not the input matrix T has been check for its characteristics
+
+
+	Returns
+	------------------
+
+	W (N,N) : ndarray
+			  time-continuous rate matrix
+
+
+	Examples
+	-----------------
+	
+	W_true =  np.array([[-0.4,   0.,    0.01,  0.5 ],
+                  [ 0.,   -0.4,   0.09,  0.2 ],
+                  [ 0.3,   0.2,  -0.9,   0.1 ],
+                  [ 0.1,   0.2,   0.8,  -0.8 ]])
+
+    T = np.array([[ 0.69710135,  0.03781962,  0.10800954,  0.285797  ],
+ 				  [ 0.01827284,  0.6906434,   0.08956199,  0.11798734],
+ 				  [ 0.16598029,  0.11634119,  0.44123802, 0.09287974],
+ 				  [ 0.11864552,  0.15519579,  0.36119045,  0.50333592]]
+
+	
+	>>> convert_prob_to_ratematrix(T,1,method='exact')
+	>>> [[-0.4   0.    0.01  0.5 ]
+ 		 [ 0.   -0.4   0.09  0.2 ]
+ 		 [ 0.3   0.2  -0.9   0.1 ]
+ 		 [ 0.1   0.2   0.8  -0.8 ]]
+
+	
+	
+	>>> convert_prob_to_ratematrix(T,1,method='pseudo')
+	>>> [[-0.30289865  0.03781962  0.10800954  0.285797  ]
+ 		 [ 0.01827284 -0.3093566   0.08956199  0.11798734]
+ 		 [ 0.16598029  0.11634119 -0.55876198  0.09287974]
+ 		 [ 0.11864552  0.15519579  0.36119045 -0.49666408]]
+
+
+ 	>>> convert_prob_to_ratematrix(T,1,method='series')
+ 	>>> [[ -4.03741281e-01   2.52113747e-03   5.87054092e-02   4.70049660e-01]
+ 		[  4.30453967e-04  -3.96434526e-01   1.03721905e-01   1.87817760e-01]
+ 		[  2.79671071e-01   1.86134042e-01  -8.65490143e-01   1.11391890e-01]
+ 		[  1.23639756e-01   2.07779347e-01   7.03062828e-01  -7.69259310e-01]]
+
+	'''
+
+	#check if matrix is valid transition matrix
+	if checked == False:
+		if check_4_transition_matrix(T,transition_prob=True) == False:
+			raise ValueError('Input matrix is not a valid transition matrix')
+
+
+
+	#exact conversion 
+	if method == 'exact':
+
+		lam,U = np.linalg.eig(T)
+
+		U_inv = np.linalg.inv(U)
+
+		D_W = np.zeros([T.shape[0],T.shape[0]],dtype=complex)
+
+        #check if real parts are larger than zero
+		neg_ind = np.where(np.real(lam)<0)[0]        
+
+		#negative real parts violate T = exp(W*t) --> setting to almost zero
+
+		lam[neg_ind] = 1e-16 + lam[neg_ind].imag*1j
+
+		np.fill_diagonal(D_W,np.log(lam)/lagtime)
+
+		W = np.dot(U,np.dot(D_W,U_inv))
+
+		#check if W is valid rate matrix
+
+		W[np.abs(W)<1e-14] = 0
+		W_tmp = np.copy(W)
+
+		np.fill_diagonal(W_tmp,0)
+
+		
+
+		
+		if np.any(np.real(W_tmp)<0) == True:        
+			raise ValueError('Caution transformation does not return correct rate matrix try method="pseudo"')
+
+		return np.real(W)
+
+
+	elif method == 'pseudo':
+		return (T - np.eye(T.shape[0]))/lagtime       
+
+	#matrix logarithm expansion
+	elif method == 'series':
+
+		
+		id_m = np.eye(T.shape[0])
+		arg = (T - id_m)
+		TMP = np.zeros([T.shape[0],T.shape[0]])
+		W = arg
+
+		TMP = arg
+		
+		W_old = W
+		i = 2
+
+		while i < 1000:
+
+			TMP = np.dot(TMP,arg)
+        
+			if np.mod(i,2) == 0:
+				W = W_old - TMP/np.float(i)
+			else:
+				W =W_old + TMP/np.float(i)
+
+			if (np.max(np.abs(TMP))/np.float(i))<eps:
+				if out_log == True:
+					print "returned after " ,i," iterations"
+				return W/lagtime
+            
+			if np.any(W-np.diag(W)*id_m < 0):
+			
+				if out_log == True:
+					print "negative values: returned after " ,i-1," iterations"
+
+				return W_old/lagtime
+
+			W_old = W
+			i += 1
+		if out_log == True:
+			print "returned after 1000 iterations"
+		return W/lagtime
+
+	else: 
+		print "non valid method"
