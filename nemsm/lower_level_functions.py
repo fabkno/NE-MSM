@@ -71,26 +71,17 @@ def check_4_transition_matrix(W,transition_prob=False,eps=1e-14):
 			else:
 				M = M.T
 
-
-
-
 	#check if all egdes possess inverse edge, i.e. i->j --> j-->i
 	if np.any(((M>0)*1.0 + (M.T>0)*1.0) == 1):
 		print 'Input transition matrix does not possess reversible edges'
 		return False
 
-
 	tree = create_spanning_tree(0,Adj_matrix=M,chords_out=False)
-
 	if len(tree) +1 !=M.shape[0]:
 		print 'Input transition matrix is not connected'
 		return False
 
 	return True
-
-
-
-
 
 
 def calc_stationary_distribution(W,
@@ -118,8 +109,6 @@ def calc_stationary_distribution(W,
 	p : (N) ndarray
 			steady-state probability distribution
 
-	
-
 	Examples
 	----------------
 
@@ -128,10 +117,8 @@ def calc_stationary_distribution(W,
                   [ 0.3,   0.2,  -0.9,   0.1 ],
                   [ 0.1,   0.2,   0.8,  -0.8 ]])
 
-  	>>> calc_stationary_distribution(W) 
-  	
+  	>>> calc_stationary_distribution(W) 	
   	>>>  array([ 0.35212134,  0.18138963,  0.18856323,  0.2779258 ])
-
 
    '''
 
@@ -140,9 +127,12 @@ def calc_stationary_distribution(W,
 		if check_4_transition_matrix(W,transition_prob=transition_prob) == False:
 			raise ValueError('Input matrix is not a valid transition matrix')
 
-
-	#compute eigenvectors and values
-	lam,EV = np.linalg.eig(W)
+	#check for row/col stochastic
+	if (np.abs(np.sum(W[:,0])) < 1e-14) or (np.abs(np.sum(W[:,0]) -1) < 1e-14) == True:
+		#compute eigenvectors and values
+		lam,EV = np.linalg.eig(W)		
+	else:
+		lam,EV = np.linalg.eig(W.T)
 
 	if transition_prob == False:
 		ind = np.real(np.abs(lam)).argmin()
@@ -207,21 +197,17 @@ def convert_prob_to_ratematrix(T,
  				  [ 0.16598029,  0.11634119,  0.44123802, 0.09287974],
  				  [ 0.11864552,  0.15519579,  0.36119045,  0.50333592]]
 
-	
 	>>> convert_prob_to_ratematrix(T,1,method='exact')
 	>>> [[-0.4   0.    0.01  0.5 ]
  		 [ 0.   -0.4   0.09  0.2 ]
  		 [ 0.3   0.2  -0.9   0.1 ]
  		 [ 0.1   0.2   0.8  -0.8 ]]
 
-	
-	
 	>>> convert_prob_to_ratematrix(T,1,method='pseudo')
 	>>> [[-0.30289865  0.03781962  0.10800954  0.285797  ]
  		 [ 0.01827284 -0.3093566   0.08956199  0.11798734]
  		 [ 0.16598029  0.11634119 -0.55876198  0.09287974]
  		 [ 0.11864552  0.15519579  0.36119045 -0.49666408]]
-
 
  	>>> convert_prob_to_ratematrix(T,1,method='series')
  	>>> [[ -4.03741281e-01   2.52113747e-03   5.87054092e-02   4.70049660e-01]
@@ -235,8 +221,6 @@ def convert_prob_to_ratematrix(T,
 	if checked == False:
 		if check_4_transition_matrix(T,transition_prob=True) == False:
 			raise ValueError('Input matrix is not a valid transition matrix')
-
-
 
 	#exact conversion 
 	if method == 'exact':
@@ -265,14 +249,10 @@ def convert_prob_to_ratematrix(T,
 
 		np.fill_diagonal(W_tmp,0)
 
-		
-
-		
 		if np.any(np.real(W_tmp)<0) == True:        
 			raise ValueError('Caution transformation does not return correct rate matrix try method="pseudo"')
 
 		return np.real(W)
-
 
 	elif method == 'pseudo':
 		return (T - np.eye(T.shape[0]))/lagtime       
@@ -280,7 +260,6 @@ def convert_prob_to_ratematrix(T,
 	#matrix logarithm expansion
 	elif method == 'series':
 
-		
 		id_m = np.eye(T.shape[0])
 		arg = (T - id_m)
 		TMP = np.zeros([T.shape[0],T.shape[0]])
@@ -320,3 +299,76 @@ def convert_prob_to_ratematrix(T,
 
 	else: 
 		print "non valid method"
+
+def calc_flux_array(M,transition_prob=False,
+					p_steady=None,
+					prob_out = False,
+					eps=1e-10,checked=False):
+
+	'''
+	compute flux matrix 	
+
+	Parameters
+	--------------
+	M (N,N) : ndarray transition matrix 
+
+	transition_prob : bool (default False) when False W is rate matrix 
+	
+	p_steady (N) : ndarray (default None) steady state probability distribution
+	
+	prob_out : bool (default False) when True, return steady state probabilities
+	
+	eps : float (default 1e-10) numerical threshold below which fluxes are set to zero
+
+	checked : bool (default False) when True, input transition matrix is checked to be valid
+
+	Returns
+	--------------
+
+	F (N,N) : ndarray probability flux matrix
+
+	Examples
+	-------------
+	
+	W = np.array([[-0.4,   0.,    0.01,  0.5 ],
+                  [ 0.,   -0.4,   0.09,  0.2 ],
+                  [ 0.3,   0.2,  -0.9,   0.1 ],
+                  [ 0.1,   0.2,   0.8,  -0.8 ]])
+	
+	>>> calc_flux_array(W,transition_prob=False)
+	>>> [[-0.          0.          0.00188563  0.1389629 ]
+ 		 [ 0.         -0.          0.01697069  0.05558516]
+ 		 [ 0.1056364   0.03627793 -0.          0.02779258]
+ 		 [ 0.03521213  0.03627793  0.15085058 -0.        ]]
+
+	'''
+
+	if checked == False:
+		if check_4_transition_matrix(M,transition_prob=transition_prob) is False:
+			raise ValueError('Non valid transition matrix detected')
+
+	if p_steady is None:
+		p_steady = calc_stationary_distribution(M,transition_prob=transition_prob,checked=True)
+
+	F = np.zeros(M.shape)
+
+	if (np.abs(np.sum(M[:,0])) < 1e-14) or (np.abs(np.sum(M[:,0]) -1) < 1e-14) == True:
+		F = M * p_steady
+		F *= (F>eps)
+
+	else:
+		F = M *p_steady[:,np.newaxis]
+		F *= (F>eps)
+	
+	#check for Kirchhoff's current law, when not valid input p_steady is not correct
+	I = F-F.T
+	I *= I>0
+
+	if np.any(np.abs(np.sum(I,axis=0) - np.sum(I,axis=1)) > 1e-14) == True:
+		raise ValueError('Input steady state probability is not correct')
+
+	if prob_out == True:
+		return F,p_steady
+	else:
+		return F
+
