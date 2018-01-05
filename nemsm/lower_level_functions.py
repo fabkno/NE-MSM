@@ -10,17 +10,15 @@ def check_4_transition_matrix(W,transition_prob=False,eps=1e-14):
 	-------------
 
 	W : (N,N) ndarray
-			either transition rate or transition probability matrix
+		  either transition rate or transition probability matrix
 
 	transition_prob : bool (default False)
-					  when False W is rate matrix 
-	eps : float : numerical threshold for zero
+			  when False W is rate matrix 
+	eps : float       numerical threshold for zero
 	
 	Returns
 	-------------
-
 	Bool : True 
-
 
 	Example
 	--------------
@@ -31,9 +29,7 @@ def check_4_transition_matrix(W,transition_prob=False,eps=1e-14):
                   [ 0.1,   0.2,   0.8,  -0.8 ]])
 
     >>> check_4_transition_matrix(W,transition_prob=False)
-
     >>> True
-
 
 	'''
 	M = np.copy(W)
@@ -44,12 +40,8 @@ def check_4_transition_matrix(W,transition_prob=False,eps=1e-14):
 		if np.any(M) <0:
 			print 'Negative nondiagonal elements detected'
 			return False
-
 	else:
-
-
 		np.fill_diagonal(M,0)
-
 		if np.any(M) <0:
 			print 'Negative nondiagonal elements detected'
 			return False
