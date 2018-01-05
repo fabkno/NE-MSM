@@ -83,6 +83,27 @@ def check_4_transition_matrix(W,transition_prob=False,eps=1e-14):
 	return True
 
 
+def check_4_row_col_stochastic(M,eps=1e-14):
+	'''
+	Parameters
+	-----------
+	M (N,N) : ndarray input transition matrix
+
+	eps : float (default 1e-14) threshold for numerical zero
+	
+	Returns
+	-----------
+
+	type : string either "row" for row stochastic or "col" for column stochastic
+
+	'''
+	if (np.abs(np.sum(M[:,0])) < eps) or (np.abs(np.sum(M[:,0]) -1) < eps) == True:
+		return "col"
+
+	if (np.abs(np.sum(M[0,:])) < eps) or (np.abs(np.sum(M[0,:]) -1) < eps) == True:
+		return "row"
+
+
 def calc_stationary_distribution(W,transition_prob=False,checked=False):
 	'''
 
@@ -122,7 +143,7 @@ def calc_stationary_distribution(W,transition_prob=False,checked=False):
 			raise ValueError('Input matrix is not a valid transition matrix')
 
 	#check for row/col stochastic
-	if (np.abs(np.sum(W[:,0])) < 1e-14) or (np.abs(np.sum(W[:,0]) -1) < 1e-14) == True:
+	if check_4_row_col_stochastic(W) =='col':
 		#compute eigenvectors and values
 		lam,EV = np.linalg.eig(W)		
 	else:
@@ -319,9 +340,9 @@ def calc_flux_array(M,transition_prob=False,p_steady=None,prob_out = False,eps=1
 	-------------
 	
 	W = np.array([[-0.4,   0.,    0.01,  0.5 ],
-                  [ 0.,   -0.4,   0.09,  0.2 ],
-                  [ 0.3,   0.2,  -0.9,   0.1 ],
-                  [ 0.1,   0.2,   0.8,  -0.8 ]])
+				[ 0.,   -0.4,   0.09,  0.2 ],
+				[ 0.3,   0.2,  -0.9,   0.1 ],
+				[ 0.1,   0.2,   0.8,  -0.8 ]])
 	
 	>>> calc_flux_array(W,transition_prob=False)
 	>>> [[-0.          0.          0.00188563  0.1389629 ]
@@ -340,11 +361,12 @@ def calc_flux_array(M,transition_prob=False,p_steady=None,prob_out = False,eps=1
 
 	F = np.zeros(M.shape)
 
-	if (np.abs(np.sum(M[:,0])) < 1e-14) or (np.abs(np.sum(M[:,0]) -1) < 1e-14) == True:
+	_type = check_4_row_col_stochastic(M)
+	if _type == 'col':
 		F = M * p_steady
 		F *= (F>eps)
 
-	else:
+	elif _type == 'row':
 		F = M *p_steady[:,np.newaxis]
 		F *= (F>eps)
 	
@@ -360,3 +382,113 @@ def calc_flux_array(M,transition_prob=False,p_steady=None,prob_out = False,eps=1
 	else:
 		return F
 
+
+def timescales_rate_matrix(W,number=5,complex_valued=True,checked=False,_stoch=None):
+	'''
+	Compute the timescales of a given rate matrix
+
+	Parameters
+	------------
+	W (N,N) : ndarray transition rate matrix
+
+	number : int number of timescales to compute (start with slowest)
+
+	complex_values : bool (default True) when True retrun absolute value of complex time scales else return only its real part					
+    
+	checked : bool (default False) when False check if input matrix is valid rate matrix
+
+	_stoch : string (default None) when None matrix is checked for row/column stochasticity, other options "col", "row"
+
+	Returns
+	------------
+	tau (number) : (complex) float timescales of rate matrix
+
+	Examples
+	------------
+	
+	W = np.array([[-0.4,   0.,    0.01,  0.5 ],
+				[ 0.,   -0.4,   0.09,  0.2 ],
+				[ 0.3,   0.2,  -0.9,   0.1 ],
+				[ 0.1,   0.2,   0.8,  -0.8 ]])
+
+	>>> timescales_rate_matrix(W,number=3)
+	>>> [ 2.44919979  0.91479227  0.91479227]
+	'''
+	if checked == False:
+		if check_4_transition_matrix(W) is False:
+			raise ValueError('Non valid transition matrix detected')
+
+	if _stoch is None:
+		_stoch = check_4_row_col_stochastic(W)
+
+	if _stoch == 'col':
+		if complex_valued == True:
+			tau = -np.sort(np.abs(np.linalg.eigvals(W)))[1:number+1] 
+
+		else:
+			tau = np.sort(np.real(np.linalg.eigvals(W)))[::-1][1:number+1]
+
+	elif _stoch == 'row':
+		if complex_valued == True:
+			tau = -np.sort(np.abs(np.linalg.eigvals(W.T)))[1:number+1] 
+		else:
+			tau = np.sort(np.real(np.linalg.eigvals(W.T)))[::-1][1:number+1]
+	else:
+		raise ValueError('Matrix is neither row nor column stochastic. Check input string')
+	tau = -1./tau
+	return tau
+
+def timescales_prob_matrix(T,lagtime,number=5,complex_valued=True,checked=False,_stoch=None):
+	'''
+	Compute the timescales of a given transition probability matrix
+
+	Parameters
+	------------
+	T (N,N) : ndarray transition probability matrix
+	
+	lagtime : float lagtime in absolute units
+	
+	number : int number of timescales to compute (start with slowest)
+
+	complex_values : bool (default True) when True retrun absolute value of complex time scales else return only its real part					
+    
+	checked : bool (default False) when False check if input matrix is valid rate matrix
+
+	_stoch : string (default None) when None matrix is checked for row/column stochasticity, other options "col", "row"
+
+	Returns
+	------------
+	tau (number) : (complex) float timescales of rate matrix
+
+	Examples
+	------------
+	
+	T = np.array([[  9.61059494e-01   4.96139082e-04   2.80401333e-03   4.71098922e-02],
+ 				[  2.30075246e-04   9.61069452e-01   9.18262260e-03   1.88866173e-02],
+ 				[  2.81694329e-02   1.88457622e-02   9.14419444e-01   1.00741345e-02],
+				[  1.05409978e-02   1.95886470e-02   7.35939202e-02   9.23929356e-01]])
+
+	>>> timescales_prob_matrix(T,lagtime=0.1,number=3)
+	>>> [ 2.44919979  0.95615852  0.95615852]
+	'''
+	if checked == False:
+		if check_4_transition_matrix(T,transition_prob=True) is False:
+			raise ValueError('Non valid transition matrix detected')
+
+	if _stoch is None:
+		_stoch = check_4_row_col_stochastic(T)
+
+	if _stoch == 'col':
+		if complex_valued == True:
+			_lam = np.sort(np.abs(np.linalg.eigvals(T)))[::-1][1:number+1]
+		else:
+			_lam = np.sort(np.real(np.linalg.eigvals(T)))[::-1][1:number+1]
+	elif _stoch == 'row':
+		if complex_valued == True:
+			_lam = np.sort(np.abs(np.linalg.eigvals(T.T)))[::-1][1:number+1]
+		else:
+			_lam = np.sort(np.real(np.linalg.eigvals(T.T)))[::-1][1:number+1]
+	else:
+		raise ValueError('Matrix is neither row nor column stochastic. Check input string')
+	
+	return -lagtime/np.log(_lam)
