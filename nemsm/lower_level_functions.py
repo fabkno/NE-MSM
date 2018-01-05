@@ -9,11 +9,10 @@ def check_4_transition_matrix(W,transition_prob=False,eps=1e-14):
 	Parameters
 	-------------
 
-	W : (N,N) ndarray
-		  either transition rate or transition probability matrix
+	W : (N,N) ndarray either transition rate or transition probability matrix
 
-	transition_prob : bool (default False)
-			  when False W is rate matrix 
+	transition_prob : bool (default False) when False W is rate matrix 
+
 	eps : float       numerical threshold for zero
 	
 	Returns
@@ -24,9 +23,9 @@ def check_4_transition_matrix(W,transition_prob=False,eps=1e-14):
 	--------------
 
 	W = np.array([[-0.4,   0.,    0.01,  0.5 ],
-                  [ 0.,   -0.4,   0.09,  0.2 ],
-                  [ 0.3,   0.2,  -0.9,   0.1 ],
-                  [ 0.1,   0.2,   0.8,  -0.8 ]])
+			[ 0.,   -0.4,   0.09,  0.2 ],
+			[ 0.3,   0.2,  -0.9,   0.1 ],
+			[ 0.1,   0.2,   0.8,  -0.8 ]])
 
     >>> check_4_transition_matrix(W,transition_prob=False)
     >>> True
@@ -84,9 +83,7 @@ def check_4_transition_matrix(W,transition_prob=False,eps=1e-14):
 	return True
 
 
-def calc_stationary_distribution(W,
-								 transition_prob=False,
-								 checked=False):
+def calc_stationary_distribution(W,transition_prob=False,checked=False):
 	'''
 
 	compute startionary probability distribution
@@ -94,14 +91,11 @@ def calc_stationary_distribution(W,
 	Parameters
 	---------------
 
-	W : (N,N) ndarray
-			either transition rate or transition probability matrix
+	W : (N,N) ndarray either transition rate or transition probability matrix
 
-	transition_prob : bool (default False)
-					  when False W is rate matrix 
+	transition_prob : bool (default False) when False W is rate matrix 
 
-	checked : bool (default False)
-					when True check if input matrix possess characteristics of transition matrix
+	checked : bool (default False) when True check if input matrix possess characteristics of transition matrix
 
 	Returns
 	----------------
@@ -120,7 +114,7 @@ def calc_stationary_distribution(W,
   	>>> calc_stationary_distribution(W) 	
   	>>>  array([ 0.35212134,  0.18138963,  0.18856323,  0.2779258 ])
 
-   '''
+	'''
 
 	#check if matrix is valid transition matrix
 	if checked == False:
@@ -146,12 +140,7 @@ def calc_stationary_distribution(W,
 
 
 
-def convert_prob_to_ratematrix(T,
-							 	lagtime,
-							 	method='series',
-							 	eps=1e-10,
-							 	out_log=True,
-							 	checked=False):
+def convert_prob_to_ratematrix(T,lagtime,method='series',eps=1e-10,out_log=True,checked=False):
 	'''
 	Convert given transition probability matrix in rate matrix
 
@@ -188,14 +177,14 @@ def convert_prob_to_ratematrix(T,
 	-----------------
 	
 	W_true =  np.array([[-0.4,   0.,    0.01,  0.5 ],
-                  [ 0.,   -0.4,   0.09,  0.2 ],
-                  [ 0.3,   0.2,  -0.9,   0.1 ],
-                  [ 0.1,   0.2,   0.8,  -0.8 ]])
+				[ 0.,   -0.4,   0.09,  0.2 ],
+				[ 0.3,   0.2,  -0.9,   0.1 ],
+				[ 0.1,   0.2,   0.8,  -0.8 ]])
 
-    T = np.array([[ 0.69710135,  0.03781962,  0.10800954,  0.285797  ],
- 				  [ 0.01827284,  0.6906434,   0.08956199,  0.11798734],
- 				  [ 0.16598029,  0.11634119,  0.44123802, 0.09287974],
- 				  [ 0.11864552,  0.15519579,  0.36119045,  0.50333592]]
+	T = np.array([[ 0.69710135,  0.03781962,  0.10800954,  0.285797  ],
+ 			[ 0.01827284,  0.6906434,   0.08956199,  0.11798734],
+ 			[ 0.16598029,  0.11634119,  0.44123802, 0.09287974],
+ 			[ 0.11864552,  0.15519579,  0.36119045,  0.50333592]]
 
 	>>> convert_prob_to_ratematrix(T,1,method='exact')
 	>>> [[-0.4   0.    0.01  0.5 ]
@@ -300,10 +289,7 @@ def convert_prob_to_ratematrix(T,
 	else: 
 		print "non valid method"
 
-def calc_flux_array(M,transition_prob=False,
-					p_steady=None,
-					prob_out = False,
-					eps=1e-10,checked=False):
+def calc_flux_array(M,transition_prob=False,p_steady=None,prob_out = False,eps=1e-10,checked=False):
 
 	'''
 	compute flux matrix 	
@@ -326,6 +312,8 @@ def calc_flux_array(M,transition_prob=False,
 	--------------
 
 	F (N,N) : ndarray probability flux matrix
+
+	p_steady (N) : ndarray (optional) steady state probability distribution
 
 	Examples
 	-------------
